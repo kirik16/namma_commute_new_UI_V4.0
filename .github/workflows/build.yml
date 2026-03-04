@@ -16,11 +16,13 @@ jobs:
         with:
           flutter-version: '3.27.4'
           channel: 'stable'
+          cache: true
       - name: Find Flutter project
         id: find
         run: |
           PUBSPEC=$(find . -name "pubspec.yaml" | grep -v ".dart_tool" | grep -v "build/" | head -1)
           DIR=$(dirname "$PUBSPEC")
+          echo "✅ Found: $DIR"
           echo "dir=$DIR" >> $GITHUB_OUTPUT
       - name: Write local.properties
         run: |
@@ -28,6 +30,8 @@ jobs:
           echo "flutter.sdk=$FLUTTER_ROOT" >> ${{ steps.find.outputs.dir }}/android/local.properties
       - name: Flutter pub get
         run: cd ${{ steps.find.outputs.dir }} && flutter pub get
+      - name: Flutter analyze
+        run: cd ${{ steps.find.outputs.dir }} && flutter analyze --no-fatal-infos --no-fatal-warnings || true
       - name: Build APK
         run: cd ${{ steps.find.outputs.dir }} && flutter build apk --release --no-tree-shake-icons
       - uses: actions/upload-artifact@v4
@@ -35,3 +39,7 @@ jobs:
           name: NammaCommute-V4-APK
           path: ${{ steps.find.outputs.dir }}/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
+      - name: Done
+        run: |
+          APK="${{ steps.find.outputs.dir }}/build/app/outputs/flutter-apk/app-release.apk"
+          [ -f "$APK" ] && echo "✅ APK Ready! $(du -sh $APK | cut -f1)" || exit 1
